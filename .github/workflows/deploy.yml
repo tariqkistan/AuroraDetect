@@ -1,0 +1,112 @@
+name: Deploy AuroraDetect Backend
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+env:
+  AWS_REGION: us-east-1
+  PROJECT_NAME: aurora-detect
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/lambda/fraud-detection/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd backend/lambda/fraud-detection
+        npm ci
+    
+    - name: Run tests
+      run: |
+        cd backend/lambda/fraud-detection
+        npm run local
+      env:
+        NODE_ENV: test
+
+  deploy-dev:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Deploy to Development
+      run: |
+        chmod +x backend/scripts/deploy.sh
+        ./backend/scripts/deploy.sh dev
+      env:
+        AWS_REGION: ${{ env.AWS_REGION }}
+
+  deploy-prod:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Deploy to Production
+      run: |
+        chmod +x backend/scripts/deploy.sh
+        ./backend/scripts/deploy.sh prod
+      env:
+        AWS_REGION: ${{ env.AWS_REGION }}
+    
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          Automated release of AuroraDetect backend
+          
+          Changes in this release:
+          ${{ github.event.head_commit.message }}
+        draft: false
+        prerelease: false 

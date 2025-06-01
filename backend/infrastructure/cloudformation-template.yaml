@@ -1,0 +1,252 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AuroraDetect Fraud Detection Infrastructure'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: 'aurora-detect'
+    Description: 'Name of the project for resource naming'
+  
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: 'Environment name'
+
+Resources:
+  # Kinesis Data Stream
+  TransactionStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Sub '${ProjectName}-${Environment}-transaction-stream'
+      ShardCount: 1
+      RetentionPeriodHours: 24
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # DynamoDB Table for Transactions
+  TransactionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${ProjectName}-${Environment}-transactions'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: transactionId
+          AttributeType: S
+        - AttributeName: cardId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: transactionId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: CardIdTimestampIndex
+          KeySchema:
+            - AttributeName: cardId
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # SNS Topic for Fraud Alerts
+  FraudAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${ProjectName}-${Environment}-fraud-alerts'
+      DisplayName: 'AuroraDetect Fraud Alerts'
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # IAM Role for Lambda Function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-lambda-execution-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: FraudDetectionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:DescribeStream
+                  - kinesis:DescribeStreamSummary
+                  - kinesis:GetRecords
+                  - kinesis:GetShardIterator
+                  - kinesis:ListShards
+                  - kinesis:ListStreams
+                Resource: !GetAtt TransactionStream.Arn
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: 
+                  - !GetAtt TransactionsTable.Arn
+                  - !Sub '${TransactionsTable.Arn}/index/*'
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref FraudAlertsTopic
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Lambda Function
+  FraudDetectionLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-fraud-detection'
+      Runtime: nodejs18.x
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            console.log('Placeholder function - deploy actual code');
+            return { statusCode: 200 };
+          };
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TransactionsTable
+          SNS_TOPIC_ARN: !Ref FraudAlertsTopic
+          NODE_ENV: !Ref Environment
+      Timeout: 300
+      MemorySize: 512
+      ReservedConcurrencyLimit: 10
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Event Source Mapping for Kinesis to Lambda
+  KinesisEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt TransactionStream.Arn
+      FunctionName: !Ref FraudDetectionLambda
+      StartingPosition: LATEST
+      BatchSize: 10
+      MaximumBatchingWindowInSeconds: 5
+      ParallelizationFactor: 1
+      MaximumRecordAgeInSeconds: 3600
+      BisectBatchOnFunctionError: true
+      MaximumRetryAttempts: 3
+
+  # CloudWatch Log Group for Lambda
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${FraudDetectionLambda}'
+      RetentionInDays: 14
+
+  # CloudWatch Alarms
+  LambdaErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-${Environment}-lambda-errors'
+      AlarmDescription: 'Lambda function error rate'
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref FraudDetectionLambda
+      AlarmActions:
+        - !Ref FraudAlertsTopic
+
+  LambdaDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${ProjectName}-${Environment}-lambda-duration'
+      AlarmDescription: 'Lambda function duration'
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 30000
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref FraudDetectionLambda
+      AlarmActions:
+        - !Ref FraudAlertsTopic
+
+Outputs:
+  KinesisStreamName:
+    Description: 'Name of the Kinesis Data Stream'
+    Value: !Ref TransactionStream
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-kinesis-stream-name'
+
+  KinesisStreamArn:
+    Description: 'ARN of the Kinesis Data Stream'
+    Value: !GetAtt TransactionStream.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-kinesis-stream-arn'
+
+  DynamoDBTableName:
+    Description: 'Name of the DynamoDB table'
+    Value: !Ref TransactionsTable
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-dynamodb-table-name'
+
+  DynamoDBTableArn:
+    Description: 'ARN of the DynamoDB table'
+    Value: !GetAtt TransactionsTable.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-dynamodb-table-arn'
+
+  SNSTopicArn:
+    Description: 'ARN of the SNS topic for fraud alerts'
+    Value: !Ref FraudAlertsTopic
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-sns-topic-arn'
+
+  LambdaFunctionName:
+    Description: 'Name of the Lambda function'
+    Value: !Ref FraudDetectionLambda
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-lambda-function-name'
+
+  LambdaFunctionArn:
+    Description: 'ARN of the Lambda function'
+    Value: !GetAtt FraudDetectionLambda.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-lambda-function-arn' 
