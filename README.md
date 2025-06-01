@@ -2,13 +2,13 @@
 
 Real-time fraud detection system built with AWS and Next.js
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 Frontend (Next.js/Vercel) → AWS Kinesis → Lambda → DynamoDB + SNS
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Backend Deployment
 
@@ -30,7 +30,7 @@ Frontend (Next.js/Vercel) → AWS Kinesis → Lambda → DynamoDB + SNS
    npm run local
    ```
 
-## 📊 Features
+## Features
 
 - **Real-time processing** via Kinesis Data Streams
 - **Fraud detection rules**:
@@ -44,6 +44,6 @@ Frontend (Next.js/Vercel) → AWS Kinesis → Lambda → DynamoDB + SNS
 
 See `backend/lambda/fraud-detection/README.md` for detailed configuration.
 
-## 📝 License
+## License
 
 MIT License 
