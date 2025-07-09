@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "regions": ["iad1"],
+  "env": {
+    "DYNAMODB_TABLE": "aurora-detect-dev-transactions",
+    "KINESIS_STREAM_NAME": "aurora-detect-dev-transaction-stream",
+    "LAMBDA_FUNCTION_NAME": "aurora-detect-dev-fraud-detection"
+  }
+} 

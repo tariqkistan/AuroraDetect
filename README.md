@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AuroraDetect - Fraud Detection System
+
+AuroraDetect is a real-time fraud detection system that monitors financial transactions and identifies potentially fraudulent activities.
+
+## Features
+
+- Real-time transaction monitoring
+- Fraud detection using AWS Lambda and Kinesis
+- Dashboard with transaction metrics and visualization
+- API endpoints for transaction processing and statistics
+
+## Architecture
+
+The system consists of:
+
+1. **Frontend**: Next.js application with a dashboard for monitoring transactions and fraud alerts
+2. **Backend**: AWS Lambda function for fraud detection, triggered by Kinesis streams
+3. **Storage**: DynamoDB for storing transaction data
+4. **Notifications**: SNS for fraud alerts
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 18+
+- AWS CLI configured with appropriate permissions
+- AWS resources deployed (see backend setup)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Frontend Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repository
+2. Install dependencies:
+   ```
+   cd aurora-detect-frontend
+   npm install
+   ```
+3. Start the development server:
+   ```
+   npm run dev
+   ```
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Backend Setup
 
-## Learn More
+The backend uses AWS CloudFormation for infrastructure as code:
 
-To learn more about Next.js, take a look at the following resources:
+1. Deploy the CloudFormation stack:
+   ```
+   cd backend/scripts
+   ./deploy.sh
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. This will create:
+   - Kinesis Data Stream for transaction processing
+   - Lambda function for fraud detection
+   - DynamoDB table for transaction storage
+   - SNS topic for fraud alerts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API Endpoints
 
-## Deploy on Vercel
+### `/api/transactions`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `GET`: Retrieve recent transactions
+- `POST`: Submit a new transaction for fraud detection
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### `/api/stats`
+
+- `GET`: Get system statistics and fraud metrics
+
+## Deployment
+
+### Vercel Deployment
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Configure the following environment variables:
+   - `AWS_REGION`: The AWS region where your resources are deployed
+   - `AWS_ACCESS_KEY_ID`: AWS access key with permissions for DynamoDB, Kinesis, and CloudWatch
+   - `AWS_SECRET_ACCESS_KEY`: AWS secret key
+
+4. Deploy using the Vercel dashboard or CLI:
+   ```
+   vercel --prod
+   ```
+
+## Testing
+
+You can test the fraud detection system by:
+
+1. Using the test transaction form in the dashboard
+2. Directly calling the API endpoints with tools like Postman
+3. Running the automated tests in the backend:
+   ```
+   cd backend/lambda/fraud-detection
+   npm test
+   ```
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

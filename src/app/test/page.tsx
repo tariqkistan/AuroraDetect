@@ -1,7 +1,7 @@
-import { Dashboard } from '@/components/dashboard'
+import { TestTransactionForm } from '@/components/test-transaction-form'
 import Link from 'next/link'
 
-export default function Home() {
+export default function TestPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 shadow-sm">
@@ -19,7 +19,10 @@ export default function Home() {
           </nav>
         </div>
       </header>
-      <Dashboard />
+      <div className="container mx-auto p-6">
+        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">Test Transaction Generator</h1>
+        <TestTransactionForm />
+      </div>
     </div>
   )
-}
+} 
