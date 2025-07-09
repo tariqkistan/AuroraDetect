@@ -1,0 +1,48 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudWatchLogsPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:*"
+    },
+    {
+      "Sid": "KinesisStreamPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "kinesis:DescribeStream",
+        "kinesis:DescribeStreamSummary",
+        "kinesis:GetRecords",
+        "kinesis:GetShardIterator",
+        "kinesis:ListShards",
+        "kinesis:ListStreams"
+      ],
+      "Resource": "arn:aws:kinesis:*:*:stream/TransactionStream"
+    },
+    {
+      "Sid": "DynamoDBPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:Query",
+        "dynamodb:Scan"
+      ],
+      "Resource": "arn:aws:dynamodb:*:*:table/Transactions"
+    },
+    {
+      "Sid": "SNSPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "sns:Publish"
+      ],
+      "Resource": "arn:aws:sns:*:*:fraud-alerts"
+    }
+  ]
+} 

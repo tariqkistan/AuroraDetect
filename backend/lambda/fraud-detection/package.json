@@ -1,0 +1,39 @@
+{
+  "name": "aurora-detect-fraud-lambda",
+  "version": "1.0.0",
+  "description": "Real-time fraud detection Lambda function for AuroraDetect",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:verbose": "jest --verbose",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "local": "node local-test.js",
+    "validate": "npm run lint && npm run test",
+    "precommit": "npm run validate"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1691.0",
+    "dotenv": "^17.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "aws-sdk-mock": "^5.8.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0"
+  },
+  "keywords": [
+    "fraud-detection",
+    "aws",
+    "lambda",
+    "kinesis",
+    "dynamodb"
+  ],
+  "author": "AuroraDetect Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
