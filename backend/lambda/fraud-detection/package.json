@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "aws-sdk": "^2.1691.0",
-    "dotenv": "^17.0.1"
+    "dotenv": "^17.0.1",
+    "geolib": "^3.3.4",
+    "node-geocoder": "^4.4.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",

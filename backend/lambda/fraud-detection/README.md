@@ -18,6 +18,7 @@ DynamoDB (Transactions) + SNS (fraud-alerts)
 - **Fraud Detection Rules**:
   - High amount threshold (>$20,000)
   - Multiple transactions per card in short time window (>3 in 1 minute)
+  - Impossible travel detection (transactions from locations that would be physically impossible to travel between in the given timeframe)
 - **Data Storage**: Stores all transactions in DynamoDB with fraud flags
 - **Alert System**: Publishes fraud alerts to SNS topic
 - **Error Handling**: Robust error handling with partial batch failure support

@@ -1,0 +1,12 @@
+{
+  "name": "aurora-detect",
+  "version": "1.0.0",
+  "description": "AuroraDetect - Real-time Fraud Detection System",
+  "scripts": {
+    "dev": "cd aurora-detect-frontend && npm run dev",
+    "build": "cd aurora-detect-frontend && npm run build",
+    "start": "cd aurora-detect-frontend && npm run start"
+  },
+  "author": "",
+  "license": "ISC"
+} 

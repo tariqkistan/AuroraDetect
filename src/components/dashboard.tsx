@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,46 +18,104 @@ import {
   RefreshCw
 } from 'lucide-react'
 
-// Mock data for demonstration
-const mockStats = {
-  totalTransactions: 1247,
-  fraudDetected: 23,
-  fraudRate: 1.8,
-  avgProcessingTime: 245,
+// Initial state with zeros
+const initialStats = {
+  totalTransactions: 0,
+  fraudDetected: 0,
+  fraudRate: 0,
+  avgProcessingTime: 0,
   systemHealth: 99.9
 }
-
-const mockRecentTransactions = [
-  {
-    id: 'txn_1751554283863_1',
-    cardId: 'card_****_1234',
-    amount: 150.75,
-    location: 'New York, NY',
-    timestamp: '2025-07-03T14:51:23.863Z',
-    status: 'normal',
-    fraudFlag: false
-  },
-  {
-    id: 'txn_1751554283863_2',
-    cardId: 'card_****_5678',
-    amount: 25000,
-    location: 'Los Angeles, CA',
-    timestamp: '2025-07-03T14:51:23.863Z',
-    status: 'fraud',
-    fraudFlag: true,
-    fraudReasons: ['High amount: $25000 exceeds threshold of $20000']
-  }
-]
 
 export function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(new Date())
+  const [stats, setStats] = useState(initialStats)
+  const [transactions, setTransactions] = useState([])
+  const [error, setError] = useState(null)
+
+  // Fetch transactions and calculate stats
+  const fetchTransactions = async () => {
+    setIsRefreshing(true)
+    setError(null)
+    
+    try {
+      const response = await fetch('/api/transactions')
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setTransactions(data.transactions || [])
+        
+        // Calculate stats
+        const fraudTransactions = data.transactions.filter(t => t.fraudFlag)
+        const totalCount = data.transactions.length
+        
+        setStats({
+          totalTransactions: totalCount,
+          fraudDetected: fraudTransactions.length,
+          fraudRate: totalCount > 0 ? ((fraudTransactions.length / totalCount) * 100).toFixed(1) : 0,
+          avgProcessingTime: 245, // Default for now
+          systemHealth: 99.9 // Default
+        })
+      } else {
+        throw new Error(data.message || 'Failed to fetch transactions')
+      }
+    } catch (err) {
+      console.error('Error fetching transactions:', err)
+      setError(err.message)
+      
+      // In development, use mock data as fallback
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Using mock data as fallback')
+        // Mock data for demonstration
+        const mockTransactions = [
+          {
+            id: 'txn_1751554283863_1',
+            cardId: 'card_****_1234',
+            amount: 150.75,
+            location: 'New York, NY',
+            timestamp: '2025-07-03T14:51:23.863Z',
+            status: 'normal',
+            fraudFlag: false
+          },
+          {
+            id: 'txn_1751554283863_2',
+            cardId: 'card_****_5678',
+            amount: 25000,
+            location: 'Los Angeles, CA',
+            timestamp: '2025-07-03T14:51:23.863Z',
+            status: 'fraud',
+            fraudFlag: true,
+            fraudReasons: ['High amount: $25000 exceeds threshold of $20000']
+          }
+        ]
+        
+        setTransactions(mockTransactions)
+        setStats({
+          totalTransactions: mockTransactions.length,
+          fraudDetected: mockTransactions.filter(t => t.fraudFlag).length,
+          fraudRate: 50,
+          avgProcessingTime: 245,
+          systemHealth: 99.9
+        })
+      }
+    } finally {
+      setIsRefreshing(false)
+      setLastUpdate(new Date())
+    }
+  }
+
+  // Initial fetch on component mount
+  useEffect(() => {
+    fetchTransactions()
+  }, [])
 
   const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setLastUpdate(new Date())
-    setIsRefreshing(false)
+    await fetchTransactions()
   }
 
   return (
@@ -88,12 +146,21 @@ export function Dashboard() {
       </div>
 
       {/* System Status Alert */}
-      <Alert className="border-green-200 bg-green-50">
-        <CheckCircle className="h-4 w-4 text-green-600" />
-        <AlertDescription className="text-green-800">
-          System is operational. All services running normally.
-        </AlertDescription>
-      </Alert>
+      {error ? (
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            {error}. {process.env.NODE_ENV === 'development' && 'Using mock data as fallback.'}
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            System is operational. All services running normally.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -103,9 +170,9 @@ export function Dashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.totalTransactions.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{stats.totalTransactions.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last hour
+              {stats.totalTransactions > 0 ? '+12% from last hour' : 'No transactions yet'}
             </p>
           </CardContent>
         </Card>
@@ -116,9 +183,9 @@ export function Dashboard() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{mockStats.fraudDetected}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.fraudDetected}</div>
             <p className="text-xs text-muted-foreground">
-              {mockStats.fraudRate}% fraud rate
+              {stats.fraudRate}% fraud rate
             </p>
           </CardContent>
         </Card>
@@ -129,7 +196,7 @@ export function Dashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockStats.avgProcessingTime}ms</div>
+            <div className="text-2xl font-bold">{stats.avgProcessingTime}ms</div>
             <p className="text-xs text-muted-foreground">
               Average response time
             </p>
@@ -142,8 +209,8 @@ export function Dashboard() {
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{mockStats.systemHealth}%</div>
-            <Progress value={mockStats.systemHealth} className="mt-2" />
+            <div className="text-2xl font-bold text-green-600">{stats.systemHealth}%</div>
+            <Progress value={stats.systemHealth} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -153,7 +220,7 @@ export function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8,432</div>
+            <div className="text-2xl font-bold">{transactions.length > 0 ? '8,432' : '0'}</div>
             <p className="text-xs text-muted-foreground">
               Unique cards processed
             </p>
@@ -180,11 +247,11 @@ export function Dashboard() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Fraud Detection Rate</span>
-                  <Badge variant="secondary">{mockStats.fraudRate}%</Badge>
+                  <Badge variant="secondary">{stats.fraudRate}%</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Average Processing Time</span>
-                  <Badge variant="secondary">{mockStats.avgProcessingTime}ms</Badge>
+                  <Badge variant="secondary">{stats.avgProcessingTime}ms</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">System Uptime</span>
@@ -205,24 +272,30 @@ export function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {mockRecentTransactions.map(transaction => (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      {transaction.fraudFlag ? (
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                      ) : (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                      <div>
-                        <p className="font-medium">${transaction.amount.toLocaleString()}</p>
-                        <p className="text-sm text-gray-600">{transaction.cardId} • {transaction.location}</p>
+                {transactions.length > 0 ? (
+                  transactions.map(transaction => (
+                    <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        {transaction.fraudFlag ? (
+                          <AlertTriangle className="h-5 w-5 text-red-500" />
+                        ) : (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        )}
+                        <div>
+                          <p className="font-medium">${transaction.amount.toLocaleString()}</p>
+                          <p className="text-sm text-gray-600">{transaction.cardId} • {transaction.location}</p>
+                        </div>
                       </div>
+                      <Badge variant={transaction.fraudFlag ? 'destructive' : 'default'}>
+                        {transaction.fraudFlag ? 'FRAUD' : 'NORMAL'}
+                      </Badge>
                     </div>
-                    <Badge variant={transaction.fraudFlag ? 'destructive' : 'default'}>
-                      {transaction.fraudFlag ? 'FRAUD' : 'NORMAL'}
-                    </Badge>
+                  ))
+                ) : (
+                  <div className="text-center p-4 text-gray-500">
+                    No transactions found. Try submitting a test transaction.
                   </div>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
