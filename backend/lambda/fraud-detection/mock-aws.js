@@ -37,6 +37,17 @@ const mockDynamoDB = {
                 return Promise.resolve({ Items: filteredItems });
             }
         };
+    },
+    scan: (params) => {
+        return {
+            promise: () => {
+                console.log(`[Mock DynamoDB] Scanning table: ${params.TableName}`);
+                // Scan in-memory store
+                const tableData = transactionStore.get(params.TableName) || new Map();
+                const items = Array.from(tableData.values());
+                return Promise.resolve({ Items: items });
+            }
+        };
     }
 };
 
