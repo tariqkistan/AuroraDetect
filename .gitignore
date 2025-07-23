@@ -113,3 +113,4 @@ cloudformation-outputs.json
 
 # Local testing files
 local-test-results.json 
+.vercel

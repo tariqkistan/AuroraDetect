@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "env": {
+    "AWS_REGION": "us-east-1",
+    "DYNAMODB_TABLE": "AuroraDetect-Transactions",
+    "KINESIS_STREAM_NAME": "aurora-detect-dev-transaction-stream"
+  }
+} 
